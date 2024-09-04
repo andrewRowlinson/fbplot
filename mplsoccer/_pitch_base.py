@@ -1665,6 +1665,10 @@ class BasePitch(ABC):
         """ Calculate a Convex Hull from set of coordinates."""
 
     @abstractmethod
+    def scatterdensity(self, x, y, ax, cmap='viridis', sort=True, **kwargs):
+        """ Implement a method to plot a scatter density plot."""
+
+    @abstractmethod
     def voronoi(self, x, y, teams):
         """ Calculate the Voronoi polygons for each team."""
 

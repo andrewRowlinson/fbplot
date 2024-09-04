@@ -6,6 +6,7 @@ from matplotlib import patches
 from matplotlib import rcParams
 from scipy.spatial import Voronoi, ConvexHull
 from scipy.stats import circmean
+from scipy.interpolate import interpn
 
 from mplsoccer._pitch_base import BasePitch
 from mplsoccer.heatmap import (bin_statistic, bin_statistic_positional,
@@ -625,6 +626,62 @@ class BasePitchPlot(BasePitch):
         points = np.vstack([x, y]).T
         hull = ConvexHull(points)
         return points[hull.vertices].reshape(1, -1, 2)
+
+    def scatterdensity(self, x, y, ax, cmap='viridis', sort=True, **kwargs):
+        """ Generate scatter density plot - a scatter plot where point colour represents 2D density at that point.
+        Inspired by https://github.com/LKremer/ggpointdensity
+
+        Parameters
+        ----------
+        x, y : array-like or scalar.
+            Commonly, these parameters are 1D arrays.
+
+        ax : matplotlib.axes.Axes, default None
+            The axis to plot on.
+
+        cmap : str or matplotlib Colormap, default 'viridis'
+             A Colormap instance or registered colormap name to use for density colouring
+
+        sort : boolean, default True
+             Sort the points so the highest densities are plotted last and are thus on top
+
+        **kwargs : All other keyword arguments are passed on to matplotlib.axes.Axes.scatter.
+
+        Returns
+        -------
+        paths : matplotlib.collections.PathCollection
+                or a tuple of (paths, paths) if marker='football'
+
+        Examples
+        --------
+        >>> from mplsoccer import Pitch
+        >>> import numpy as np
+        >>> pitch = Pitch()
+        >>> fig, ax = pitch.draw()
+        >>> x = np.random.uniform(low=0, high=120, size=1500)
+        >>> y = np.random.uniform(low=0, high=80, size=1500)
+        >>> scatter = pitch.scatterdensity(x,y, ax=ax, cmap='magma')
+        """
+        # Need to convert x,y to numpy array if not already
+        x = np.array(x)
+        y = np.array(y)
+
+        # The following implementation is taken from https://stackoverflow.com/a/53865762/3015186 by Guillaume
+        # It is a lot faster than the in-built scipy kde method whilst retaining visual quality overlaid on a pitch
+        data, x_e, y_e = np.histogram2d(x, y, bins=20, density=True)
+        z = interpn((0.5 * (x_e[1:] + x_e[:-1]), 0.5 * (y_e[1:] + y_e[:-1])), data, np.vstack([x, y]).T,
+                    method="splinef2d", bounds_error=False)
+
+        # To be sure to plot all data
+        z[np.where(np.isnan(z))] = 0.0
+
+        # Sort the points by density, so that the densest points are plotted last
+        if sort:
+            idx = z.argsort()
+            x, y, z = x[idx], y[idx], z[idx]
+
+        scatter = self.scatter(x, y, ax=ax, c=z, cmap=cmap, **kwargs)
+        return scatter
 
     def voronoi(self, x, y, teams):
         """ Get Voronoi vertices for a set of coordinates.
