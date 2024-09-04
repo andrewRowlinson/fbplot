@@ -136,6 +136,70 @@ class Pitch(BasePitchPlot):
     def _reverse_annotate_if_vertical(annotate):
         return annotate
 
+    def add_arc_around_goal(self, ax, radius_meters, placement='left', **kwargs):
+        """Add an arc to the pitch centred on one of the goals.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis
+            A matplotlib.axes.Axes to draw the arc on.
+        radius_meters : float
+            The radius of the arc in meters.
+        placement : str, default 'left'
+            Which side of the pitch to plot the arc. Should be either 'left' or 'right'.
+        kwargs : dict
+            Additional keyword arguments accepted by matplotlib.patches.Arc.
+
+        Returns
+        -------
+            Arc added to `ax` and None returned.
+
+        Raises
+        ------
+        ValueError
+            If `placement` is not 'left' or 'right'.
+
+        Examples
+        --------
+        >>> from mplsoccer import Pitch
+        >>> pitch = Pitch()
+        >>> fig, ax = pitch.draw()
+        >>> pitch.add_arc_around_goal(ax, radius_meters=10, placement="left")
+        >>> pitch.add_arc_around_goal(ax, radius_meters=20, placement="right", color="red")
+        """
+        xmin, xmax, ymin, ymax = self.extent
+        length_pixels = abs(xmax - xmin)
+        width_pixels = abs(ymax - ymin)
+        
+        # scale down via ratio of radius to dimension
+        if self.pitch_type != 'metricasports':
+            width = 2 * length_pixels * radius_meters / self.dim.length
+            height =  2 * width_pixels * radius_meters / self.dim.width / self.dim.aspect
+            if self.pitch_type == 'tracab':
+                # has unit centimeters
+                width *= 100
+                height *= 100
+        elif self.pitch_type == 'metricasports':
+            width = 2 * length_pixels * radius_meters / self.dim.pitch_length
+            height = 2 * width_pixels * radius_meters / self.dim.pitch_width 
+            
+        if self.dim.origin_center:
+            y = 0
+        else:
+            y = width_pixels / 2 - self.pad_bottom
+        if placement == 'left':
+            self._draw_arc(
+                ax, xmin + self.pad_left, y, width, height, theta1=-90, theta2=90, **kwargs
+            )
+        elif placement == 'right':
+            self._draw_arc(
+                ax, xmax - self.pad_right, y, width, height, theta1=90, theta2=270, **kwargs
+            )
+        else:
+            raise ValueError(
+                f'placement={placement} should be "left" or "right"'
+            )
+    
 
 class VerticalPitch(BasePitchPlot):
 
@@ -265,3 +329,67 @@ class VerticalPitch(BasePitchPlot):
     @staticmethod
     def _reverse_annotate_if_vertical(annotate):
         return annotate[::-1]
+    
+    def add_arc_around_goal(self, ax, radius_meters, placement, **kwargs):
+        """Add an arc to the pitch centred on one of the goals.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis
+            A matplotlib.axes.Axes to draw the arc on.
+        radius_meters : float
+            The radius of the arc in meters.
+        placement : str, default 'top'
+            Which side of the pitch to plot the arc. Should be either 'top' or 'bottom'.
+        kwargs : dict
+            Additional keyword arguments accepted by matplotlib.patches.Arc.
+
+        Returns
+        -------
+            Arc added to `ax` and None returned.
+
+        Raises
+        ------
+        ValueError
+            If `placement` is not 'top' or 'bottom'.
+
+        Examples
+        --------
+        >>> from mplsoccer import Pitch
+        >>> pitch = Pitch()
+        >>> fig, ax = pitch.draw()
+        >>> pitch.add_arc_around_goal(ax, radius_meters=15, placement="bottom")
+        >>> pitch.add_arc_around_goal(ax, radius_meters=7, placement="top", color="blue")
+        """
+        xmin, xmax, ymin, ymax = self.extent
+        width_pixels = abs(xmax - xmin)
+        length_pixels = abs(ymax - ymin)
+        
+        # scale down via ratio of radius to dimension
+        if self.pitch_type != "metricasports":
+            width = 2 * width_pixels * self.dim.aspect * radius_meters / self.dim.width
+            height = 2 * length_pixels * radius_meters / self.dim.length
+            if self.pitch_type == "tracab":
+                # has unit centimeters
+                width *= 100
+                height *= 100
+        elif self.pitch_type == "metricasports":
+            width = 2 * width_pixels * radius_meters / self.dim.pitch_width
+            height = 2 * length_pixels * radius_meters / self.dim.pitch_length
+            
+        if self.dim.origin_center:
+            x = 0
+        else:
+            x = width_pixels / 2 - self.pad_left
+        if placement == 'bottom':
+            self._draw_arc(
+                ax, ymin + self.pad_bottom, x, height, width, theta1=-90, theta2=90, **kwargs
+            )
+        elif placement == 'top':
+            self._draw_arc(
+                ax, ymax - self.pad_top, x, height, width, theta1=90, theta2=270, **kwargs
+            )
+        else:
+            raise ValueError(
+                f'placement={placement} should be "top" or "bottom"'
+            )
