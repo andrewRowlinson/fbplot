@@ -348,3 +348,46 @@ title2 = fig.text(x=0.5, y=0.9, s='Larger marker = greater pass distance', va='c
                   ha='center', size=15, color=pitch.line_color, fontproperties=fm_rubik.prop)
 
 plt.show()  # If you are using a Jupyter notebook you do not need this line
+
+
+##############################################################################
+# Using custom image markers
+# ---------------
+#Before starting, you will have to download two packages, they are:
+# svgpathtools
+# svgpath2mpl
+# we are going to use an 'aim' marker for plotting a shot in this example
+#keep in mind that you must have your image as a SVG file. Don't worry - it is possible to convert PDFs and PNGs to SVGs for free online.
+#For best results, keep the image simple and make sure it has a transparent background.
+#by Nitin Reddy Malreddy (IG:@_nitinnn) (IG:@compelling.football.analysis) (twitter: @coftblanalysis)
+
+#read in the SVG image file
+import matplotlib as mpl
+from svgpathtools import svg2paths
+from svgpath2mpl import parse_path
+
+shot_path, attributes = svg2paths('shotmarker.svg')#name of the svg file I am using
+shot_marker = parse_path(attributes[0]['d'])
+
+#last minute touchups
+shot_marker.vertices -= shot_marker.vertices.mean(axis=0)
+
+#Note:if you converted a PNG to SVG, you can skip this step
+shot_marker = shot_marker.transformed(mpl.transforms.Affine2D().rotate_deg(180))
+shot_marker = shot_marker.transformed(mpl.transforms.Affine2D().scale(-1,1))
+
+# Setup the pitch
+pitch = Pitch()
+fig, ax = pitch.draw(figsize=(15,15),constrained_layout=True, tight_layout=True)
+
+# Plot the shot with custom image marker
+sc_team1 = pitch.scatter(df_non_goal_shots_barca.x, df_non_goal_shots_barca.y,
+                          s=(df_non_goal_shots_barca.shot_statsbomb_xg * 1900) + 100,
+                          marker = shot_marker, #assigning the marker argument with out image(in this case - shot_marker)
+                          edgecolors='white',
+                          c='none',#I would recommend assigning none to the color argument and assigning the edgecolors argument with the color you wish
+                          ax=ax, label='Shot')
+
+plt.show() # If you are using a Jupyter notebook you do not need this line
+#With that you've completed the task of using a custom image marker for the scatter method.
+#ENJOY! :)
